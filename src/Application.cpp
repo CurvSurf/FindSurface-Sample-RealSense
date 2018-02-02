@@ -226,6 +226,9 @@ void Application::init_OpenGL() {
 	trackball2.curr.dnear = 0.001f;
 	trackball2.curr.dfar = 20.0f;
 	trackball2.prev = trackball2.home = trackball2.curr;
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_PROGRAM_POINT_SIZE);
 }
 
 void Application::release_OpenGL() {
@@ -368,6 +371,7 @@ void Application::render(int frame, double time_elapsed) {
 
 		render_inlier();
 		render_geometry();
+		
 		break;
 
 	case SCREEN_MODE::OBJECT:
@@ -375,8 +379,9 @@ void Application::render(int frame, double time_elapsed) {
 		render_geometry();
 
 		glViewport(0, 0, width / 5, height / 5);
-
+		glDisable(GL_DEPTH_TEST);
 		render_color();
+		glEnable(GL_DEPTH_TEST);
 	}
 }
 
@@ -401,7 +406,7 @@ void Application::render_inlier() {
 
 void Application::render_geometry() {
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	switch (result.type) {
 	case FS_FEATURE_TYPE::FS_TYPE_PLANE:
 		plane_renderer.view_matrix = trackball2.view_matrix();
@@ -634,11 +639,11 @@ void Application::run_FindSurface(float x, float y) {
 			}
 			
 			auto minmax = std::minmax_element(angles.begin(), angles.end());
-			int min_index = minmax.first - angles.begin();
-			int max_index = minmax.second - angles.begin();
+			size_t min_index = minmax.first - angles.begin();
+			size_t max_index = minmax.second - angles.begin();
 			elbow_begin = inliers[max_index];
 			float3 elbow_end = inliers[min_index];
-			angle = PositiveAngleBetween(elbow_begin, elbow_end, Normalize(Cross(elbow_begin, elbow_end)));
+			angle = PositiveAngleBetween(elbow_begin, elbow_end, torus_axis);
 		};
 		using namespace smath;
 		float mean_radius = result.torus_param.mr;
@@ -654,7 +659,7 @@ void Application::run_FindSurface(float x, float y) {
 		float3 tilt_axis = Normalize(Cross(y_axis, axis));
 		float tilt_angle = AngleBetween(y_axis, axis, tilt_axis);
 		mat4 tilt = Rotate(tilt_axis, tilt_angle);
-		float3 tilt_elbow_begin = ToFloat3(tilt*float4{ 1, 0, 0, 1 });
+		float3 tilt_elbow_begin = ToFloat3(tilt*float4{ 1, 0, 0, 0 });
 		float3 rot_axis = Normalize(Cross(tilt_elbow_begin, elbow_begin));
 		float rot_angle = PositiveAngleBetween(tilt_elbow_begin, elbow_begin, rot_axis);
 		mat4 rot = Rotate(rot_axis, rot_angle);
@@ -718,7 +723,7 @@ void Application::on_wheel(GLFWwindow* window, double x, double y) {
 	}
 	else return;
 
-	t->zoom(y);
+	t->zoom(float(y));
 }
 
 int Application::cast_to_point_cloud(double tx, double ty, float& depth) {

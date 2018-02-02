@@ -13,3 +13,7 @@ vs14/Debug/*
 vs14/Debug/**/
 vs14/Release/*
 vs14/Release/**/
+vs14/x86/*
+vs14/x86/**/
+vs14/x64/*
+vs14/x64/**/
