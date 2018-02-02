@@ -1,0 +1,15 @@
+build/
+bin/
+data/
+*.suo
+*.lib
+*.dll
+.vs/
+*.db
+*.opendb
+*.exe
+src/3rdparty/**/
+vs14/Debug/*
+vs14/Debug/**/
+vs14/Release/*
+vs14/Release/**/
