@@ -44,6 +44,16 @@ namespace smath {
 	inline float3 Cross(float3 v0, float3 v1) { return float3{ v0[1] * v1[2] - v0[2] * v1[1], v0[2] * v1[0] - v0[0] * v1[2], v0[0] * v1[1] - v0[1] * v1[0] }; }
 	inline float Length(float3 v) { return sqrtf(Dot(v, v)); }
 	inline float3 Normalize(float3 v) { return v / Length(v); }
+	inline float AngleBetween(float3 v0, float3 v1, float3 axis) {
+		float3 cross = Cross(v0, v1);
+		if (Length(cross) < FLT_EPSILON) return 0.f;
+		float sign = Dot(Normalize(axis), Normalize(cross));
+		return sign*acosf(Dot(Normalize(v0), Normalize(v1)));
+	}
+	inline float PositiveAngleBetween(float3 v0, float3 v1, float3 axis) {
+		float angle = AngleBetween(v0, v1, axis);
+		return angle < 0.0f ? angle + PI*2.0f : angle;
+	}
 
 	using float4 = std::array<float, 4>;
 
@@ -132,6 +142,7 @@ namespace smath {
 			0, 0, 0, 1.0f
 		};
 	}
+	inline mat4 Scale(float scale) { return mat4{ scale,0,0,0, 0,scale,0,0, 0,0,scale,0, 0,0,0,1 }; }
 	inline mat4 Scale(float3 scale) { return mat4{ scale[0],0,0,0, 0,scale[1],0,0, 0,0,scale[2],0, 0,0,0,1 }; }
 
 	inline mat4 LookAt(float3 eye, float3 at, float3 up) {

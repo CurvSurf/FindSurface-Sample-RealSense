@@ -189,6 +189,7 @@ copy ..\src\libFindSurface\freepass_bin\win32\x64\FindSurface.dll $(OutDir)</Com
     <ClInclude Include="..\src\Application.h" />
     <ClInclude Include="..\src\camera.h" />
     <ClInclude Include="..\src\opengl_wrapper.h" />
+    <ClInclude Include="..\src\Renderer.h" />
     <ClInclude Include="..\src\sgeometry.h" />
     <ClInclude Include="..\src\shader_resources.h" />
     <ClInclude Include="..\src\smath.h" />

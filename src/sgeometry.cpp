@@ -6,7 +6,8 @@ namespace sgeometry {
 
 	// Create a vertex array of sphere to be drawn in wireframe mode. (xyz only)
 	// It will be a unit sphere located at the origin (0, 0, 0).
-	void SphereData::generate() {
+	void CreateSphereVertexData(std::vector<float3>& vertices, std::vector<unsigned int>& indices, int LOD) {
+
 		/* reference: https://sites.google.com/site/ofauckland/examples/subdivide-a-tetrahedron-to-a-sphere */
 		static std::function<void(int, int, int, int)> subdivide = [&](int i0, int i1, int i2, int level) {
 			if (level-- > 0) {
@@ -44,41 +45,31 @@ namespace sgeometry {
 		vertices.push_back({ 0.f, 0.f, 1.f });
 		vertices.push_back({ 0.f, 0.f, -1.f });
 
-		subdivide(2, 4, 0, level_of_details);
-		subdivide(2, 0, 5, level_of_details);
-		subdivide(2, 5, 1, level_of_details);
-		subdivide(2, 1, 4, level_of_details);
-		subdivide(3, 0, 4, level_of_details);
-		subdivide(3, 5, 0, level_of_details);
-		subdivide(3, 1, 5, level_of_details);
-		subdivide(3, 4, 1, level_of_details);
+		subdivide(2, 4, 0, LOD);
+		subdivide(2, 0, 5, LOD);
+		subdivide(2, 5, 1, LOD);
+		subdivide(2, 1, 4, LOD);
+		subdivide(3, 0, 4, LOD);
+		subdivide(3, 5, 0, LOD);
+		subdivide(3, 1, 5, LOD);
+		subdivide(3, 4, 1, LOD);
 	}
 
-	int SphereData::LOD() { return level_of_details; }
-	void SphereData::create() { create(level_of_details); }
-	void SphereData::create(int LOD) { level_of_details = LOD; generate(); }
+	// It's center will be located at the origin (0, 0, 0) and its length is 2 and radius is 1.
+	void CreateCylinderVertexData(std::vector<float3>& vertices, std::vector<unsigned int>& indices) {
 
-	void CylinderData::generate() {
-		int RADIAL_SUBDIV = radial_subdivision;
-		int LATERAL_SUBDIV = lateral_subdivision;
-		
+		static const int CYLINDER_SUBDIV = 36;
+
+		//unsigned int base_index = unsigned int(vertices.size());
+
 		float t = 1.f / 3.f;
 
-		float unit_angle = PI / (RADIAL_SUBDIV / 2);
-		for (int k = 0; k < RADIAL_SUBDIV; k++) {
+		float unit_angle = PI / (CYLINDER_SUBDIV / 2);
+		for (int k = 0; k < CYLINDER_SUBDIV; k++) {
 			float angle = unit_angle*k;
 			float c = cosf(angle);
 			float s = sinf(angle);
 
-			for (int s = 0; s < LATERAL_SUBDIV; s++) {
-				float rs = float(s) / LATERAL_SUBDIV;
-				float y = lerp(1.f, -1.f, rs);
-				vertices.push_back({ c, y, s });
-				int i00 = ;
-				int i01;
-				int i10;
-				int i11;
-			}
 			vertices.push_back({ c, 1, s });
 			vertices.push_back({ c, t, s });
 			vertices.push_back({ c, -t, s });
@@ -94,7 +85,7 @@ namespace sgeometry {
 			//    |_\|				   |_\|
 			// 30      31			30		31
 			//
-			int i00 = k * 4;	int i01 = ((k + 1) % RADIAL_SUBDIV) * 4;
+			int i00 = k * 4;	int i01 = ((k + 1) % CYLINDER_SUBDIV) * 4;
 			int i10 = i00 + 1;	int i11 = i01 + 1;
 			int i20 = i10 + 1;	int i21 = i11 + 1;
 			int i30 = i20 + 1;	int i31 = i21 + 1;
@@ -110,24 +101,12 @@ namespace sgeometry {
 		}
 	}
 
-	int CylinderData::RSUB() { return radial_subdivision; }
-	int CylinderData::LSUB() { return lateral_subdivision; }
-	void CylinderData::create() { create(radial_subdivision, lateral_subdivision); }
-	void CylinderData::create(int RSUB, int LSUB) { radial_subdivision = RSUB; lateral_subdivision = LSUB; generate(); }
-
-	
-	// It's center will be located at the origin (0, 0, 0) and its length is 2 and radius is 1.
-	void CreateCylinderVertexData(std::vector<float3>& vertices, std::vector<unsigned int>& indices) {
-
-		
-	}
-
 	/* about terminology: https://en.wikipedia.org/wiki/Torus */
 	// It's center will be located at the origin (0, 0, 0) and mean radius is 1 and tube radius is 0.5.
-	void CreateTorusVertexData(std::vector<float3>& vertices, std::vector<unsigned int>& indices, int TSUB, int PSUB) {
+	void CreateTorusVertexData(std::vector<float3>& vertices, std::vector<unsigned int>& indices) {
 
-		int TOROIDAL_SUBDIV = TSUB;
-		int POLOIDAL_SUBDIV = PSUB;
+		static const int TOROIDAL_SUBDIV = 36;
+		static const int POLOIDAL_SUBDIV = 10;
 		//vertices.clear(); vertices.reserve(TOROIDAL_SUBDIV*POLOIDAL_SUBDIV);
 		//indices.clear(); indices.reserve(TOROIDAL_SUBDIV*POLOIDAL_SUBDIV * 6);
 		//unsigned int base_index = unsigned int(vertices.size());
@@ -148,7 +127,7 @@ namespace sgeometry {
 				float theta = poloidal_unit_angle*float(s);
 				float ctheta = cosf(theta);
 				float stheta = sinf(theta);
-
+				
 				vertices.push_back({
 					(mean_radius + tube_radius*ctheta)*cphi,
 					tube_radius*stheta,

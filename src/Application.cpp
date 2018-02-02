@@ -19,10 +19,11 @@ bool Application::init() {
 	glfwSetMouseButtonCallback(window, [](GLFWwindow* w, int b, int a, int m) {reinterpret_cast<Application*>(glfwGetWindowUserPointer(w))->on_mouse_button(w, b, a, m); });
 	glfwSetCursorPosCallback(window, [](GLFWwindow* w, double x, double y) {reinterpret_cast<Application*>(glfwGetWindowUserPointer(w))->on_cursor_pos(w, x, y); });
 	glfwSetKeyCallback(window, [](GLFWwindow* w, int k, int s, int a, int m) {reinterpret_cast<Application*>(glfwGetWindowUserPointer(w))->on_key(w, k, s, a, m); });
-	
+	glfwSetScrollCallback(window, [](GLFWwindow* w, double x, double y) {reinterpret_cast<Application*>(glfwGetWindowUserPointer(w))->on_wheel(w, x, y); });
+		
 	glfwMakeContextCurrent(window);
 
-	//glewExperimental = true;
+	glewExperimental = true;
 	if (glewInit() != GLEW_OK) {
 		fprintf(stderr, "GLEW: failed to initialize GLEW.\n");
 		return false;
@@ -75,6 +76,7 @@ bool Application::init_FindSurface() {
 }
 
 void Application::release_FindSurface() {
+	cleanUpFindSurface(fs);
 	releaseFindSurface(fs);
 }
 
@@ -89,11 +91,7 @@ void Application::init_data() {
 
 void Application::init_OpenGL() {
 
-	// program
 	ShaderSource::init();
-	for (const char* pname : { "plane", "sphere", "cylinder", "cone", "torus", "point_cloud", "color" }) {
-		programs[pname].Init(ShaderSource::vs_src[pname], ShaderSource::fs_src[pname]);
-	}
 
 	// vertex data array
 	std::vector<smath::float3> sphere_vertex_data;
@@ -119,115 +117,158 @@ void Application::init_OpenGL() {
 	geometry_index_data.insert(geometry_index_data.end(), sphere_index_data.cbegin(), sphere_index_data.cend());
 	geometry_index_data.insert(geometry_index_data.end(), cylinder_index_data.cbegin(), cylinder_index_data.cend());
 	geometry_index_data.insert(geometry_index_data.end(), torus_index_data.cbegin(), torus_index_data.cend());
-
-	draw_sphere.count = sphere_index_data.size();
-	draw_sphere.indices = 0;
-	draw_sphere.basevertex = 0;
-
-	draw_cylinder.count = cylinder_index_data.size();
-	draw_cylinder.indices = reinterpret_cast<GLvoid*>(draw_sphere.count * sizeof(unsigned int));
-	draw_cylinder.basevertex = sphere_vertex_data.size();
-
-	draw_torus.count = torus_index_data.size();
-	draw_torus.indices = reinterpret_cast<GLvoid*>(GLsizei(draw_cylinder.indices) + draw_cylinder.count * sizeof(unsigned int));
-	draw_torus.basevertex = draw_cylinder.basevertex + cylinder_vertex_data.size();
-
-	// vao, vbo, ibo
-	sgl::VertexArray& geometry_vao = vertex_arrays["geometry"];
+	
+	// vao, vbo, ibo for geometries
+	sgl::VertexArray geometry_vao;
 	geometry_vao.Init();
 	geometry_vao.Bind();
 	
-	sgl::VertexBuffer& geometry_vbo = vertex_buffers["geometry"];
+	sgl::VertexBuffer geometry_vbo;
 	geometry_vbo.Init();
 	geometry_vbo.Data(geometry_vertex_data.size(), sizeof(smath::float3), geometry_vertex_data.data(), GL_STATIC_DRAW);
 	geometry_vbo.Bind();
 	geometry_vao.AttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-	sgl::IndexBuffer& geometry_ibo = index_buffers["geometry"];
+	sgl::IndexBuffer geometry_ibo;
 	geometry_ibo.Init();
 	geometry_ibo.Data(geometry_index_data.size(), sizeof(unsigned int), geometry_index_data.data(), GL_STATIC_DRAW);
 	geometry_ibo.Bind();
 
-	sgl::VertexArray& point_cloud_vao = vertex_arrays["point_cloud"];
-	point_cloud_vao.Init();
-	point_cloud_vao.Bind();
+	GLsizei sphere_vertex_count = GLsizei(sphere_vertex_data.size());
+	GLsizei sphere_index_count = GLsizei(sphere_index_data.size());
+	GLsizei cylinder_vertex_count = GLsizei(cylinder_vertex_data.size());
+	GLsizei cylinder_index_count = GLsizei(cylinder_index_data.size());
+	GLsizei torus_vertex_count = GLsizei(torus_vertex_data.size());
+	GLsizei torus_index_count = GLsizei(torus_index_data.size());
+
+	// renderer
+	plane_renderer.program.Init(ShaderSource::vs_src["plane"], ShaderSource::fs_src["plane"]);
+	plane_renderer.vertex_array = geometry_vao;
+	plane_renderer.position_buffer = geometry_vbo;
+	plane_renderer.index_buffer = geometry_ibo;
+	plane_renderer.draw = sgl::DrawArrays{ GL_TRIANGLES, 0, 6 };
+
+	sphere_renderer.program.Init(ShaderSource::vs_src["sphere"], ShaderSource::fs_src["sphere"]);
+	sphere_renderer.vertex_array = geometry_vao;
+	sphere_renderer.position_buffer = geometry_vbo;
+	sphere_renderer.index_buffer = geometry_ibo;
+	sphere_renderer.draw = sgl::DrawElementsBaseVertex{ GL_TRIANGLES, sphere_index_count, GL_UNSIGNED_INT, 0, 0 };
+
+	cylinder_renderer.program.Init(ShaderSource::vs_src["cylinder"], ShaderSource::fs_src["cylinder"]);
+	cylinder_renderer.vertex_array = geometry_vao;
+	cylinder_renderer.position_buffer = geometry_vbo;
+	cylinder_renderer.index_buffer = geometry_ibo;
+	cylinder_renderer.draw = sgl::DrawElementsBaseVertex{ GL_TRIANGLES, cylinder_index_count, GL_UNSIGNED_INT, reinterpret_cast<GLvoid*>(sphere_index_count * sizeof(unsigned int)), sphere_vertex_count };
+
+	cone_renderer.program.Init(ShaderSource::vs_src["cone"], ShaderSource::fs_src["cone"]);
+	cone_renderer.vertex_array = geometry_vao;
+	cone_renderer.position_buffer = geometry_vbo;
+	cone_renderer.index_buffer = geometry_ibo;
+	cone_renderer.draw = cylinder_renderer.draw;
+
+	torus_renderer.program.Init(ShaderSource::vs_src["torus"], ShaderSource::fs_src["torus"]);
+	torus_renderer.vertex_array = geometry_vao;
+	torus_renderer.position_buffer = geometry_vbo;
+	torus_renderer.index_buffer = geometry_ibo;
+	torus_renderer.draw = sgl::DrawElementsBaseVertex{ GL_TRIANGLES, torus_index_count, GL_UNSIGNED_INT, reinterpret_cast<GLvoid*>((sphere_index_count + cylinder_index_count) * sizeof(unsigned int)), sphere_vertex_count + cylinder_vertex_count };
+
+	depth_renderer.program.Init(ShaderSource::vs_src["point_cloud"], ShaderSource::fs_src["point_cloud"]);
+	depth_renderer.vertex_array.Init();
+	depth_renderer.vertex_array.Bind();
+	depth_renderer.position_buffer.Init();
+	depth_renderer.position_buffer.Bind();
+	depth_renderer.vertex_array.AttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	depth_renderer.color_buffer.Init();
+	depth_renderer.color_buffer.Bind();
+	depth_renderer.vertex_array.AttribIPointer(1, 3, GL_UNSIGNED_BYTE, 0, 0);
+	depth_renderer.draw = sgl::DrawArrays{ GL_POINTS, 0, 0/*using position_buffer.count instead*/ };
+
+	inlier_renderer.program = depth_renderer.program;
+	inlier_renderer.vertex_array.Init();
+	inlier_renderer.vertex_array.Bind();
+	inlier_renderer.position_buffer.Init();
+	inlier_renderer.position_buffer.Bind();
+	inlier_renderer.vertex_array.AttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	inlier_renderer.color_buffer.Init();
+	inlier_renderer.color_buffer.Bind();
+	inlier_renderer.vertex_array.AttribIPointer(1, 3, GL_UNSIGNED_BYTE, 0, 0);
+	inlier_renderer.draw = sgl::DrawArrays{ GL_POINTS, 0, 0/*using position_buffer.count instead*/ };
 	
-	sgl::VertexBuffer& point_cloud_point_vbo = vertex_buffers["point_cloud.point"];
-	point_cloud_point_vbo.Init();
-	point_cloud_point_vbo.Bind();
-	point_cloud_vao.AttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	sgl::VertexBuffer& point_cloud_color_vbo = vertex_buffers["point_cloud.color"];
-	point_cloud_color_vbo.Init();
-	point_cloud_color_vbo.Bind();
-	point_cloud_vao.AttribIPointer(1, 3, GL_UNSIGNED_BYTE, 0, 0);
-
-	sgl::VertexArray& inlier_vao = vertex_arrays["inlier"];
-	inlier_vao.Init();
-	inlier_vao.Bind();
-
-	sgl::VertexBuffer& inlier_point_vbo = vertex_buffers["inlier.point"];
-	inlier_point_vbo.Init();
-	inlier_point_vbo.Bind();
-	inlier_vao.AttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-	sgl::VertexBuffer& inlier_color_vbo = vertex_buffers["inlier.color"];
-	inlier_color_vbo.Init();
-	inlier_color_vbo.Bind();
-	inlier_vao.AttribIPointer(1, 3, GL_UNSIGNED_BYTE, 0, 0);
-
-	// PBOs, texture
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	const GLsizeiptr buffer_size = color_intrin.width*color_intrin.height * 3;
+	image_renderer.program.Init(ShaderSource::vs_src["color"], ShaderSource::fs_src["color"]);
+	glGenTextures(1, &image_renderer.texture);
+	glBindTexture(GL_TEXTURE_2D, image_renderer.texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, color_intrin.width, color_intrin.height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	glBindTexture(GL_TEXTURE_2D, 0);
-
-	const GLsizeiptr buffer_size = color_intrin.width*color_intrin.height * 3;
-	PBOs[0].Init(GL_PIXEL_UNPACK_BUFFER);
-	PBOs[0].Data(buffer_size, nullptr, GL_STREAM_DRAW);
-	PBOs[1].Init(GL_PIXEL_UNPACK_BUFFER);
-	PBOs[1].Data(buffer_size, nullptr, GL_STREAM_DRAW);
+	image_renderer.PBO[0].Init(GL_PIXEL_UNPACK_BUFFER);
+	image_renderer.PBO[0].Data(buffer_size, nullptr, GL_STREAM_DRAW);
+	image_renderer.PBO[1].Init(GL_PIXEL_UNPACK_BUFFER);
+	image_renderer.PBO[1].Data(buffer_size, nullptr, GL_STREAM_DRAW);
 
 	trackball.curr.eye = smath::float3{};
 	trackball.curr.at = smath::float3{ 0, 0, 1 };
 	trackball.curr.up = smath::float3{ 0, -1, 0 };
-	trackball.curr.width = float(width)/1000;
-	trackball.curr.height = float(height)/1000;
+	trackball.curr.width = float(width) / 1000;
+	trackball.curr.height = float(height) / 1000;
 	trackball.curr.dnear = 0.001f;
 	trackball.curr.dfar = 20.0f;
 	trackball.prev = trackball.home = trackball.curr;
+
+	trackball2.curr.eye = smath::float3{};
+	trackball2.curr.at = smath::float3{ 0, 0, 1 };
+	trackball2.curr.up = smath::float3{ 0, -1, 0 };
+	trackball2.curr.width = float(width) / 1000;
+	trackball2.curr.height = float(height) / 1000;
+	trackball2.curr.dnear = 0.001f;
+	trackball2.curr.dfar = 20.0f;
+	trackball2.prev = trackball2.home = trackball2.curr;
 }
 
 void Application::release_OpenGL() {
 
-	for (std::pair<const char*, sgl::Program> prog_pair : programs) {
-		prog_pair.second.Release();
-	}
-	programs.clear();
+	plane_renderer.program.Release();
+	plane_renderer.vertex_array.Release();
+	plane_renderer.position_buffer.Release();
+	plane_renderer.index_buffer.Release();
+	
+	sphere_renderer.program.Release();
+	sphere_renderer.vertex_array.Release();
+	sphere_renderer.position_buffer.Release();
+	sphere_renderer.index_buffer.Release();
 
-	for (std::pair<const char*, sgl::VertexArray> vao_pair : vertex_arrays) {
-		vao_pair.second.Release();
-	}
-	vertex_arrays.clear();
+	cylinder_renderer.program.Release();
+	cylinder_renderer.vertex_array.Release();
+	cylinder_renderer.position_buffer.Release();
+	cylinder_renderer.index_buffer.Release();
 
-	for (std::pair<const char*, sgl::VertexBuffer> vbo_pair : vertex_buffers) {
-		vbo_pair.second.Release();
-	}
-	vertex_buffers.clear();
+	cone_renderer.program.Release();
+	cone_renderer.vertex_array.Release();
+	cone_renderer.position_buffer.Release();
+	cone_renderer.index_buffer.Release();
 
-	for (std::pair<const char*, sgl::IndexBuffer> ibo_pair : index_buffers) {
-		ibo_pair.second.Release();
-	}
-	index_buffers.clear();
+	torus_renderer.program.Release();
+	torus_renderer.vertex_array.Release();
+	torus_renderer.position_buffer.Release();
+	torus_renderer.index_buffer.Release();
 
-	glDeleteTextures(1, &texture);
+	depth_renderer.program.Release();
+	depth_renderer.vertex_array.Release();
+	depth_renderer.position_buffer.Release();
+	depth_renderer.color_buffer.Release();
+	
+	inlier_renderer.program.Release();
+	inlier_renderer.vertex_array.Release();
+	inlier_renderer.position_buffer.Release();
+	inlier_renderer.color_buffer.Release();
 
-	PBOs[0].Release();
-	PBOs[1].Release();
+	image_renderer.program.Release();
+	glDeleteTextures(1, &image_renderer.texture);
+	image_renderer.PBO[0].Release();
+	image_renderer.PBO[1].Release();
 }
 
 void Application::run() {
@@ -299,6 +340,7 @@ void Application::update(int frame, double time_elapsed) {
 
 	// 4. camera update
 	trackball.update(time_elapsed);
+	trackball2.update(time_elapsed);
 }
 
 void Application::render(int frame, double time_elapsed) {
@@ -308,186 +350,204 @@ void Application::render(int frame, double time_elapsed) {
 	glViewport(0, 0, width, height);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	if (show_depth) {
-		render_depth_point_cloud();
-	}
-	else if (show_object) {
-		render_inlier_point_cloud();
-		render_geometries();
 
-		glViewport(0, 0, width / 5, height / 5);
-		render_color_image();
-	}
-	else {
-		render_color_image();
+	switch (screen_mode) {
+	case SCREEN_MODE::DEPTH: 
+		render_depth(); 
+		//render_touch_point();
+		break;
+
+	case SCREEN_MODE::COLOR: 
+		render_color(); 
 		
 		glEnable(GL_SCISSOR_TEST);
 		glViewport(0, 0, width / 5, height / 5);
 		glScissor(0, 0, width / 5, height / 5);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glDisable(GL_SCISSOR_TEST);
-		render_inlier_point_cloud();
-		render_geometries();
+
+		render_inlier();
+		render_geometry();
+		break;
+
+	case SCREEN_MODE::OBJECT:
+		render_inlier();
+		render_geometry();
+
+		glViewport(0, 0, width / 5, height / 5);
+
+		render_color();
 	}
 }
 
-void Application::render_color_image() {
-	// 1. PBO ping pong
-	static int index = 0;
-	int next_index = 0;
+void Application::render_depth() {
+	depth_renderer.position_buffer.Data(depth_points.size(), sizeof(rs::float3), depth_points.data(), GL_STREAM_DRAW);
+	depth_renderer.color_buffer.Data(depth_colors.size(), sizeof(ubyte3), depth_colors.data(), GL_STREAM_DRAW);
 
-	index = (index + 1) % 2;
-	next_index = (index + 1) % 2;
-
-	// 2. color image data captured from Intel RealSense device will be transferred from PBO to texture
-	// The data was sent to PBO by the code below when the previous frame is rendered.
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	PBOs[index].Bind();
-
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, color_intrin.width, color_intrin.height, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-
-	// 3. data transfer from memory (CPU) to PBO (GPU)
-	// Now we send new data to PBO, and it will be transferred to the texture when the next frame is rendered.
-	GLsizeiptr data_size = color_intrin.width*color_intrin.height * 3;
-	PBOs[next_index].Data(data_size, nullptr, GL_STREAM_DRAW);
-	
-	GLubyte*ptr = (GLubyte*)PBOs[next_index].Map(GL_WRITE_ONLY);
-	if (ptr) {
-		memcpy(ptr, color_image, data_size);
-		PBOs[next_index].Unmap();
-	}
-	
-	// 4. render the color image to screen.
-	sgl::Program& program = programs["color"];
-	program.Use(true);
-	program.Uniform1i("color_texture", 0);
-	//vertex_arrays["geometry"].Bind(); // bind dummy vao
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	program.Use(false);
+	depth_renderer.view_matrix = trackball.view_matrix();
+	depth_renderer.projection_matrix = trackball.projection_matrix();
+	depth_renderer.render();
 }
 
-void Application::render_depth_point_cloud() {
-	vertex_arrays["point_cloud"].Bind(true);
-
-	vertex_buffers["point_cloud.point"].Data(depth_points.size(), sizeof(rs::float3), depth_points.data(), GL_STREAM_DRAW);
-	vertex_buffers["point_cloud.color"].Data(depth_colors.size(), sizeof(ubyte3), depth_colors.data(), GL_STREAM_DRAW);
-	
-	sgl::Program& program = programs["point_cloud"];
-	program.Use(true);
-
-	using namespace smath;
-	GLsizei count = vertex_buffers["point_cloud.point"].count;
-
-	mat4 view_matrix = trackball.view_matrix();
-	mat4 projection_matrix = trackball.projection_matrix();
-
-	program.UniformMatrix4fv("view_matrix", view_matrix);
-	program.UniformMatrix4fv("projection_matrix", projection_matrix);
-
-	vertex_arrays["point_cloud"].Bind(true);
-	glDrawArrays(GL_POINTS, 0, count);
-	vertex_arrays["point_cloud"].Bind(false);
-	
-	vertex_arrays["geometry"].Bind(true);
-	programs["sphere"].Use();
-	float radius = 0.001f;
-	getFindSurfaceParamFloat(fs, FS_PARAM_TOUCH_R, &radius);
-	programs["sphere"].UniformMatrix4fv("model_matrix", Translate(hit_position)*Scale({ radius, radius, radius }));
-	programs["sphere"].UniformMatrix4fv("view_matrix", view_matrix);
-	programs["sphere"].UniformMatrix4fv("projection_matrix", projection_matrix);
-	programs["sphere"].Uniform3f("color", 0, 1, 0);
-	draw_sphere();
-	programs["sphere"].Use(false);
-	vertex_arrays["geometry"].Bind(false);
-
-	program.Use(false);
+void Application::render_color() {
+	image_renderer.render(color_intrin.width, color_intrin.height, color_image);
 }
 
-void Application::render_geometries() {
-	static auto get_inlier_point_cloud = [&]()->std::vector<smath::float3> {
-		const unsigned char* flags = getInOutlierFlags(fs);
-		int count = getInliersFloat(fs, nullptr, 0);
-		std::vector<smath::float3> inliers(count);
-		getInliersFloat(fs, inliers.data(), count*sizeof(smath::float3));
+void Application::render_inlier() {
+	inlier_renderer.view_matrix = trackball2.view_matrix();
+	inlier_renderer.projection_matrix = trackball2.projection_matrix();
+	inlier_renderer.render();
+}
 
-		return inliers;
-	};
+void Application::render_geometry() {
 
-	static auto get_angle_between = [](smath::float3 v0, smath::float3 v1, smath::float3 axis) {
-		using namespace smath;
-		float3 cross = Cross(v0, v1);
-		if (Length(cross) < FLT_EPSILON) return 0.f;
-
-		float sign = Dot(Normalize(axis), Normalize(cross));
-		return sign*acosf(Dot(Normalize(v0), Normalize(v1)));
-	};
-
-	static auto get_elbow_joint_angle = [&](smath::float3 torus_center, smath::float3 torus_axis, smath::float3& elbow_begin, float& angle) {
-		using namespace smath;
-		std::vector<float3>& inliers = get_inlier_point_cloud();
-
-		for (float3& pt : inliers) {
-			// point => vector (center -> point)
-			float3 v = pt - torus_center;
-			// project(point, plane perpendicular to the torus axis and including the torus center)
-			pt = Normalize(Cross(Cross(torus_axis, pt), torus_axis)); 
-		}
-
-		float3 barycentric = std::accumulate(inliers.begin(), inliers.end(), float3(), [](float3& i0, float3& i1) { return i0 + i1; }) / float(inliers.size());
-
-		float3 elbow_middle = Normalize(barycentric);
-
-		// find two extreme ends of the vectors in terms of the angle to the elbow_middle.
-		auto minmax = std::minmax_element(inliers.begin(), inliers.end(), [elbow_middle](float3& i0, float3& i1) { return get_angle_between(i0, elbow_middle, Normalize(Cross(i0, elbow_middle))) < get_angle_between(i1, elbow_middle, Normalize(Cross(i1, elbow_middle))); });
-		elbow_begin = minmax.first.operator*();
-		float3 elbow_end = minmax.second.operator*();
-		angle = get_angle_between(elbow_begin, elbow_end, Normalize(Cross(elbow_begin, elbow_end)));
-	};
-
-	using namespace smath;
-	mat4 view_matrix = trackball.view_matrix();
-	mat4 projection_matrix = trackball.projection_matrix();
-
-	vertex_arrays["geometry"].Bind();
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	switch (result.type) {
 	case FS_FEATURE_TYPE::FS_TYPE_PLANE:
-	{
-		vertex_arrays["geometry"].Bind(false);
-		sgl::Program& program = programs["plane"];
-		program.Use();
-		program.Uniform3f("color", 1, 0, 0);
-		program.Uniform3fv("quad[0]", result.plane_param.ll);
-		program.Uniform3fv("quad[1]", result.plane_param.lr);
-		program.Uniform3fv("quad[2]", result.plane_param.ur);
-		program.Uniform3fv("quad[3]", result.plane_param.ll);
-		program.Uniform3fv("quad[4]", result.plane_param.ur);
-		program.Uniform3fv("quad[5]", result.plane_param.ul);
+		plane_renderer.view_matrix = trackball2.view_matrix();
+		plane_renderer.projection_matrix = trackball2.projection_matrix();
+		plane_renderer.render(); 
+		break;
+	case FS_FEATURE_TYPE::FS_TYPE_SPHERE:
+		sphere_renderer.view_matrix = trackball2.view_matrix();
+		sphere_renderer.projection_matrix = trackball2.projection_matrix();
+		sphere_renderer.render();
+		break;
+	case FS_FEATURE_TYPE::FS_TYPE_CYLINDER:
+		cylinder_renderer.view_matrix = trackball2.view_matrix();
+		cylinder_renderer.projection_matrix = trackball2.projection_matrix();
+		cylinder_renderer.render();
+		break;
+	case FS_FEATURE_TYPE::FS_TYPE_CONE:
+		cone_renderer.view_matrix = trackball2.view_matrix();
+		cone_renderer.projection_matrix = trackball2.projection_matrix();
+		cone_renderer.render();
+		break;
+	case FS_FEATURE_TYPE::FS_TYPE_TORUS:
+		torus_renderer.view_matrix = trackball2.view_matrix();
+		torus_renderer.projection_matrix = trackball2.projection_matrix();
+		torus_renderer.render();
+		break;
+	}
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
 
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		program.Use(false);
+//void Application::render_touch_point() {
+//	vertex_arrays["geometry"].Bind(true);
+//	programs["sphere"].Use();
+//	float radius = 0.001f;
+//	getFindSurfaceParamFloat(fs, FS_PARAM_TOUCH_R, &radius);
+//	programs["sphere"].UniformMatrix4fv("model_matrix", Translate(hit_position)*Scale({ radius, radius, radius }));
+//	programs["sphere"].UniformMatrix4fv("view_matrix", view_matrix);
+//	programs["sphere"].UniformMatrix4fv("projection_matrix", projection_matrix);
+//	programs["sphere"].Uniform3f("color", 0, 1, 0);
+//	draw_sphere();
+//	programs["sphere"].Use(false);
+//	vertex_arrays["geometry"].Bind(false);
+//
+//}
+
+void Application::finalize() {
+	release_FindSurface();
+	release_RealSense();
+	release_OpenGL();
+}
+
+void Application::on_mouse_button(GLFWwindow* window, int button, int action, int mods) {
+	double x, y;
+	glfwGetCursorPos(window, &x, &y);
+	x /= width;
+	y /= height;
+
+	if (screen_mode == SCREEN_MODE::COLOR) {
+		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+			run_FindSurface(float(x), float(y));
+		}
+	}
+	else {
+		scamera::Trackball* t = &trackball;
+		if (screen_mode == SCREEN_MODE::OBJECT) t = &trackball2;
+		scamera::Trackball::Behavior b = scamera::Trackball::Behavior::NOTHING;
+		if (action == GLFW_PRESS) {
+			if (button == GLFW_MOUSE_BUTTON_LEFT)			b = scamera::Trackball::Behavior::ROTATING;
+			else if (button == GLFW_MOUSE_BUTTON_MIDDLE)	b = scamera::Trackball::Behavior::PANNING;
+			else if (button == GLFW_MOUSE_BUTTON_RIGHT)		b = scamera::Trackball::Behavior::ROLLING;
+		}
+		
+		t->mouse(float(x), float(y), b);
+	}
+}
+
+void Application::run_FindSurface(float x, float y) {
+	float depth;
+	int index = cast_to_point_cloud(x, y, depth);
+	hit_position = reinterpret_cast<smath::float3&>(depth_points[index]);
+
+	// point clouds tends to have measurement errors propositional to distance.
+	setFindSurfaceParamFloat(fs, FS_PARAMS::FS_PARAM_ACCURACY, 0.006f + 0.002f*(depth - 1.f));
+
+	// if succeeds, the struct "result" will be filled with data.
+	int res = findSurface(fs, type, index, &result);
+
+	switch (res) {
+	case FS_NOT_FOUND:
+	case FS_UNACCEPTABLE_RESULT: fprintf(stderr, "FindSurface: failed to find (%d).\n", res); return;
+	case FS_LICENSE_EXPIRED: fprintf(stderr, "FindSurface: license error occurred (FS_LICENSE_EXPIRED).\n"); return;
+	case FS_LICENSE_UNKNOWN: fprintf(stderr, "FindSurface: license error occurred (FS_LICENSE_UNKNOWN).\n"); return;
+	}
+
+	const unsigned char* flags = getInOutlierFlags(fs);
+	int count = getInliersFloat(fs, nullptr, 0); // retrieve the number of inlier points;
+	inlier_points.clear(); inlier_points.reserve(count);
+	inlier_colors.clear(); inlier_colors.reserve(count);
+
+	for (int k = 0; k<int(getPointCloudCount(fs)); k++) {
+		if (!flags[k]) {
+			inlier_points.push_back(depth_points[k]);
+			inlier_colors.push_back(depth_colors[k]);
+		}
+	}
+
+	switch (result.type) {
+	case FS_FEATURE_TYPE::FS_TYPE_PLANE:
+	{
+		plane_renderer.quad[0] = result.plane_param.ll;
+		plane_renderer.quad[1] = result.plane_param.lr;
+		plane_renderer.quad[2] = result.plane_param.ur;
+		plane_renderer.quad[3] = result.plane_param.ul;
+		
+		using namespace smath;
+		float3 ll = ToFloat3(result.plane_param.ll);
+		float3 lr = ToFloat3(result.plane_param.lr);
+		float3 ul = ToFloat3(result.plane_param.ul);
+		float3 ur = ToFloat3(result.plane_param.ur);
+		float3 center = (ll + lr + ul + ur)*0.25f;
+		float3 hori = ul - ll;
+		float3 vert = lr - ll;
+		float width = Length(hori);
+		float height = Length(vert);
+		float3 normal = Normalize(Cross(hori, vert));
+
+		fprintf(stdout, "Plane.width=%6.4f\n", width);
+		fprintf(stdout, "     .height=%6.4f\n", height);
+		fprintf(stdout, "     .center=<%6.4f, %6.4f, %6.4f>\n", center[0], center[1], center[2]);
+		fprintf(stdout, "     .normal=<%6.4f, %6.4f, %6.4f>\n", normal[0], normal[1], normal[2]);
 		break;
 	}
 	case FS_FEATURE_TYPE::FS_TYPE_SPHERE:
 	{
-		float r = result.sphere_param.r;
-		mat4 model_matrix = Translate(ToFloat3(result.sphere_param.c))*Scale({ r, r, r });
-		sgl::Program& program = programs["sphere"];
-		program.Use();
-		program.Uniform3f("color", 1, 0, 0);
-		program.UniformMatrix4fv("model_matrix", model_matrix);
-		program.UniformMatrix4fv("view_matrix", view_matrix);
-		program.UniformMatrix4fv("projection_matrix", projection_matrix);
+		using namespace smath;
+		sphere_renderer.model_matrix = Translate(smath::ToFloat3(result.sphere_param.c))*Scale(result.sphere_param.r);
+		float radius = result.sphere_param.r;
+		float3 center = ToFloat3(result.sphere_param.c);
 
-		draw_sphere();
-		program.Use(false);
+		fprintf(stdout, "Sphere.radius=%6.4f\n", radius);
+		fprintf(stdout, "      .center=<%6.4f, %6.4f, %6.4f>\n", center[0], center[1], center[2]);
 		break;
 	}
 	case FS_FEATURE_TYPE::FS_TYPE_CYLINDER:
 	{
+		using namespace smath;
 		float3 bottom_center = ToFloat3(result.cylinder_param.b);
 		float3 top_center = ToFloat3(result.cylinder_param.t);
 		float height = Length(top_center - bottom_center);
@@ -496,55 +556,91 @@ void Application::render_geometries() {
 		float3 cylinder_axis = Normalize(bottom_center - top_center);
 		float3 y_axis = { 0, 1, 0 };
 		static float deg1 = PI / 180.f;
-		float angle = Dot(y_axis, cylinder_axis);
+		float3 tilt_axis = Normalize(Cross(y_axis, cylinder_axis));
+		float angle = PositiveAngleBetween(y_axis, cylinder_axis, tilt_axis);
 
 		mat4 model_matrix = Scale({ radius, height, radius });
-		if (angle > deg1) model_matrix = Rotate(Normalize(Cross(y_axis, cylinder_axis)), angle)*model_matrix;
+		if (angle > deg1) model_matrix = Rotate(tilt_axis, angle)*model_matrix;
 		model_matrix = Translate(center)*model_matrix;
-		GLint err = glGetError();
-		sgl::Program& program = programs["cylinder"];
-		program.Use();  err = glGetError();
-		program.Uniform3f("color", 1, 0, 0);  err = glGetError();
-		program.UniformMatrix4fv("model_matrix", model_matrix);  err = glGetError();
-		program.UniformMatrix4fv("view_matrix", view_matrix);  err = glGetError();
-		program.UniformMatrix4fv("projection_matrix", projection_matrix);  err = glGetError();
-		
-		draw_cylinder();
-		program.Use(false);
+
+		cylinder_renderer.model_matrix = model_matrix;
+
+		fprintf(stdout, "Cylinder.radius=%6.4f\n", radius);
+		fprintf(stdout, "        .height=%6.4f\n", height);
+		fprintf(stdout, "        .center=<%6.4f, %6.4f, %6.4f>\n", center[0], center[1], center[2]);
+		fprintf(stdout, "        .axis=<%6.4f, %6.4f, %6.4f>\n", cylinder_axis[0], cylinder_axis[1], cylinder_axis[2]);
 		break;
 	}
 	case FS_FEATURE_TYPE::FS_TYPE_CONE:
 	{
+		using namespace smath;
 		float3 bottom_center = ToFloat3(result.cone_param.b);
 		float3 top_center = ToFloat3(result.cone_param.t);
 		float bottom_radius = result.cone_param.br;
 		float top_radius = result.cone_param.tr;
 		float height = Length(top_center - bottom_center);
 		float3 center = (bottom_center + top_center)*0.5f;
-		float3 cylinder_axis = Normalize(bottom_center - top_center);
+		float3 cone_axis = Normalize(bottom_center - top_center);
 		float3 y_axis = { 0, 1, 0 };
 		static float deg1 = PI / 180;
-		float angle = get_angle_between(y_axis, cylinder_axis, Normalize(Cross(y_axis, cylinder_axis)));
+		float angle = AngleBetween(y_axis, cone_axis, Normalize(Cross(y_axis, cone_axis)));
 
 		mat4 model_matrix = Scale({ 1, height * 0.5f, 1 });
-		if (angle > deg1) model_matrix = Rotate(Normalize(Cross(y_axis, cylinder_axis)), angle)*model_matrix;
+		if (angle > deg1) model_matrix = Rotate(Normalize(Cross(y_axis, cone_axis)), angle)*model_matrix;
 		model_matrix = Translate(center)*model_matrix;
+	
+		cone_renderer.model_matrix = model_matrix;
+		cone_renderer.bottom_radius = bottom_radius;
+		cone_renderer.top_radius = top_radius;
 
-		sgl::Program& program = programs["cone"];
-		program.Use();
-		program.Uniform3f("color", 1, 0, 0);
-		program.Uniform1f("top_radius", top_radius);
-		program.Uniform1f("bottom_radius", bottom_radius);
-		program.UniformMatrix4fv("model_matrix", model_matrix);
-		program.UniformMatrix4fv("view_matrix", view_matrix);
-		program.UniformMatrix4fv("projection_matrix", projection_matrix);
-
-		draw_cylinder();
-		program.Use(false);
+		fprintf(stdout, "Cone.top.radius=%6.4f\n", top_radius);
+		fprintf(stdout, "    .bottom.radius=%6.4f\n", bottom_radius);
+		fprintf(stdout, "    .height=%6.4f\n", height);
+		fprintf(stdout, "    .center=<%6.4f, %6.4f, %6.4f>\n", center[0], center[1], center[2]);
+		fprintf(stdout, "    .axis=<%6.4f, %6.4f, %6.4f>\n", cone_axis[0], cone_axis[1], cone_axis[2]);
 		break;
 	}
 	case FS_FEATURE_TYPE::FS_TYPE_TORUS:
 	{
+		static auto get_inlier_point_cloud = [&]()->std::vector<smath::float3> {
+			const unsigned char* flags = getInOutlierFlags(fs);
+			int count = getInliersFloat(fs, nullptr, 0);
+			std::vector<smath::float3> inliers(count);
+			getInliersFloat(fs, inliers.data(), count * sizeof(smath::float3));
+
+			return inliers;
+		};
+
+		static auto get_elbow_joint_angle = [&](smath::float3 torus_center, smath::float3 torus_axis, smath::float3& elbow_begin, float& angle) {
+			using namespace smath;
+			std::vector<float3>& inliers = get_inlier_point_cloud();
+
+			for (float3& pt : inliers) {
+				// point => vector (center -> point)
+				float3 v = pt - torus_center;
+				// project(point, plane perpendicular to the torus axis and including the torus center)
+				pt = Normalize(Cross(Cross(torus_axis, v), torus_axis));
+			}
+
+			float3 barycentric = std::accumulate(inliers.begin(), inliers.end(), float3(), [](float3& i0, float3& i1) { return i0 + i1; }) / float(inliers.size());
+
+			float3 elbow_middle = Normalize(barycentric);
+
+			// find two extreme ends of the vectors in terms of the angle to the elbow_middle.
+			std::vector<float> angles;
+			angles.reserve(inliers.size());
+			for (float3& pt : inliers) {
+				angles.push_back(AngleBetween(pt, elbow_middle, torus_axis));
+			}
+			
+			auto minmax = std::minmax_element(angles.begin(), angles.end());
+			int min_index = minmax.first - angles.begin();
+			int max_index = minmax.second - angles.begin();
+			elbow_begin = inliers[max_index];
+			float3 elbow_end = inliers[min_index];
+			angle = PositiveAngleBetween(elbow_begin, elbow_end, Normalize(Cross(elbow_begin, elbow_end)));
+		};
+		using namespace smath;
 		float mean_radius = result.torus_param.mr;
 		float tube_radius = result.torus_param.tr;
 		float3 center = ToFloat3(result.torus_param.c);
@@ -554,147 +650,75 @@ void Application::render_geometries() {
 
 		get_elbow_joint_angle(center, axis, elbow_begin, angle);
 
-		float3 rot_axis = Normalize(Cross(float3{ 1, 0, 0 }, elbow_begin));
-		float rot_angle = get_angle_between(float3{ 1, 0, 0 }, elbow_begin, rot_axis);
-		mat4 model_matrix = Translate(center)*Rotate(rot_axis, rot_angle);
+		float3 y_axis = { 0, 1, 0 };
+		float3 tilt_axis = Normalize(Cross(y_axis, axis));
+		float tilt_angle = AngleBetween(y_axis, axis, tilt_axis);
+		mat4 tilt = Rotate(tilt_axis, tilt_angle);
+		float3 tilt_elbow_begin = ToFloat3(tilt*float4{ 1, 0, 0, 1 });
+		float3 rot_axis = Normalize(Cross(tilt_elbow_begin, elbow_begin));
+		float rot_angle = PositiveAngleBetween(tilt_elbow_begin, elbow_begin, rot_axis);
+		mat4 rot = Rotate(rot_axis, rot_angle);
 
-		sgl::Program& program = programs["torus"];
-		program.Use();
-		program.Uniform3f("color", 1, 0, 0);
-		program.Uniform1f("mean_radius", mean_radius);
-		program.Uniform1f("tube_radius", tube_radius);
-		program.UniformMatrix4fv("model_matrix", model_matrix);
-		program.UniformMatrix4fv("view_matrix", view_matrix);
-		program.UniformMatrix4fv("projection_matrix", projection_matrix);
+		torus_renderer.model_matrix = Translate(center)*rot*tilt;
+		torus_renderer.mean_radius = mean_radius;
+		torus_renderer.tube_radius = tube_radius;
+		torus_renderer.angle = angle;
 
-		float ratio = angle / (2.0f*PI);
-		int 
-		int elbow_index_count = int(draw_torus.count/3*ratio)*3;
-		glDrawElementsBaseVertex(draw_torus.mode, elbow_index_count, draw_torus.type, draw_torus.indices, draw_torus.basevertex);
-		program.Use(false);
+		fprintf(stdout, "Torus.mean.radius=%6.4f\n", mean_radius);
+		fprintf(stdout, "     .tube.radius=%6.4f\n", tube_radius);
+		fprintf(stdout, "     .angle=%6.4f deg.\n", angle*180.f / PI);
+		fprintf(stdout, "     .center=<%6.4f, %6.4f, %6.4f>\n", center[0], center[1], center[2]);
+		fprintf(stdout, "     .axis=<%6.4f, %6.4f, %6.4f>\n", axis[0], axis[1], axis[2]);
 		break;
 	}
 	}
-
-	vertex_arrays["geometry"].Bind(false);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-}
-
-void Application::render_inlier_point_cloud() {
-
-	sgl::Program& program = programs["point_cloud"];
-	program.Use(true);
-
-	using namespace smath;
-	GLsizei count = vertex_buffers["inlier.point"].count;
-
-	mat4 view_matrix = trackball.view_matrix();
-	mat4 projection_matrix = trackball.projection_matrix();
-
-	program.UniformMatrix4fv("view_matrix", view_matrix);
-	program.UniformMatrix4fv("projection_matrix", projection_matrix);
-
-	vertex_arrays["inlier"].Bind(true);
-	glDrawArrays(GL_POINTS, 0, count);
-	vertex_arrays["inlier"].Bind(false);
 	
-	program.Use(false);
-}
-
-void Application::finalize() {
-	release_FindSurface();
-	release_RealSense();
-	release_OpenGL();
-}
-
-void Application::on_mouse_button(GLFWwindow* window, int button, int action, int mods) {
-	double x, y; float depth;
-	glfwGetCursorPos(window, &x, &y);
-	x /= width;
-	y /= height;
-
-	if (show_depth || show_object) {
-		switch (button) {
-		case GLFW_MOUSE_BUTTON_LEFT:
-		{
-			if (action == GLFW_PRESS) trackball.mouse(float(x), float(y), scamera::Trackball::Behavior::ROTATING);
-			else if (action == GLFW_RELEASE) trackball.mouse(float(x), float(y), scamera::Trackball::Behavior::NOTHING);
-			break;
-		}
-		case GLFW_MOUSE_BUTTON_MIDDLE:
-		{
-			if (action == GLFW_PRESS) trackball.mouse(float(x), float(y), scamera::Trackball::Behavior::PANNING);
-			else if (action == GLFW_RELEASE) trackball.mouse(float(x), float(y), scamera::Trackball::Behavior::NOTHING);
-			break;
-		}
-		case GLFW_MOUSE_BUTTON_RIGHT:
-		{
-			if (action == GLFW_PRESS) trackball.mouse(float(x), float(y), scamera::Trackball::Behavior::ZOOMING);
-			else if (action == GLFW_RELEASE) trackball.mouse(float(x), float(y), scamera::Trackball::Behavior::NOTHING);
-			break;
-		}
-		}
-	}
-	else {
-		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-			int index = cast_to_point_cloud(x, y, depth);
-			hit_position = reinterpret_cast<smath::float3&>(depth_points[index]);
-
-			// point clouds tends to have measurement errors propositional to distance.
-			setFindSurfaceParamFloat(fs, FS_PARAMS::FS_PARAM_ACCURACY, 0.006f + 0.002f*(depth - 1.f));
-			printf("depth = %f\n", depth);
-			float acc = 0.0f;
-			getFindSurfaceParamFloat(fs, FS_PARAMS::FS_PARAM_ACCURACY, &acc);
-			printf("acc = %f\n", acc);
-
-			int res = findSurface(fs, type, index, &result);
-
-			switch (res) {
-			case FS_NOT_FOUND:
-			case FS_UNACCEPTABLE_RESULT:
-				fprintf(stderr, "FindSurface: failed to find (%d).\n", res); return;
-			case FS_LICENSE_EXPIRED:
-				fprintf(stderr, "FindSurface: license error occurred (FS_LICENSE_EXPIRED).\n"); return;
-			case FS_LICENSE_UNKNOWN:
-				fprintf(stderr, "FindSurface: license error occurred (FS_LICENSE_UNKNOWN).\n"); return;
-			}
-
-			const unsigned char* flags = getInOutlierFlags(fs);
-			int count = getInliersFloat(fs, nullptr, 0); // retrieve the number of inlier points;
-			inlier_points.clear(); inlier_points.reserve(count);
-			inlier_colors.clear(); inlier_colors.reserve(count);
-
-			for (int k = 0; k<int(getPointCloudCount(fs)); k++) {
-				if (!flags[k]) {
-					inlier_points.push_back(depth_points[k]);
-					inlier_colors.push_back(depth_colors[k]);
-				}
-			}
-
-			vertex_buffers["inlier.point"].Data(inlier_points.size(), sizeof(rs::float3), inlier_points.data(), GL_STREAM_DRAW);
-			vertex_buffers["inlier.color"].Data(inlier_colors.size(), sizeof(ubyte3), inlier_colors.data(), GL_STREAM_DRAW);
-		}
-	}
+	inlier_renderer.position_buffer.Data(inlier_points.size(), sizeof(rs::float3), inlier_points.data(), GL_STREAM_DRAW);
+	inlier_renderer.color_buffer.Data(inlier_colors.size(), sizeof(ubyte3), inlier_colors.data(), GL_STREAM_DRAW);
 }
 
 void Application::on_cursor_pos(GLFWwindow* window, double x, double y) {
-	trackball.motion(float(x/width), float(y/height));
+	if (screen_mode == SCREEN_MODE::DEPTH)
+		trackball.motion(float(x / width), float(y / height));
+	else
+		trackball2.motion(float(x / width), float(y / height));
 }
 
 void Application::on_key(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (action == GLFW_PRESS) {
 		switch (key) {
 		case GLFW_KEY_ESCAPE: glfwSetWindowShouldClose(window, 1); break;
-		case GLFW_KEY_SPACE: show_object = !show_object; break;
-		case GLFW_KEY_D: show_depth = !show_depth; break;
+		case GLFW_KEY_D: screen_mode = SCREEN_MODE::DEPTH; fprintf(stdout, "Screen mode: DEPTH\n"); break;
+		case GLFW_KEY_C: screen_mode = SCREEN_MODE::COLOR; fprintf(stdout, "Screen mode: COLOR\n"); break;
+		case GLFW_KEY_O: screen_mode = SCREEN_MODE::OBJECT; fprintf(stdout, "Screen mode: OBJECT\n"); break;
 		case GLFW_KEY_0: type = FS_FEATURE_TYPE::FS_TYPE_ANY; fprintf(stdout, "FindSurface: using FS_TYPE_ANY.\n"); break;
 		case GLFW_KEY_1: type = FS_FEATURE_TYPE::FS_TYPE_PLANE; fprintf(stdout, "FindSurface: using FS_TYPE_PLANE.\n"); break;
 		case GLFW_KEY_2: type = FS_FEATURE_TYPE::FS_TYPE_SPHERE; fprintf(stdout, "FindSurface: using FS_TYPE_SPHERE.\n"); break;
 		case GLFW_KEY_3: type = FS_FEATURE_TYPE::FS_TYPE_CYLINDER; fprintf(stdout, "FindSurface: using FS_TYPE_CYLINIDER.\n"); break;
 		case GLFW_KEY_4: type = FS_FEATURE_TYPE::FS_TYPE_CONE; fprintf(stdout, "FindSurface: using FS_TYPE_CONE.\n"); break;
 		case GLFW_KEY_5: type = FS_FEATURE_TYPE::FS_TYPE_TORUS; fprintf(stdout, "FindSurface: using FS_TYPE_TORUS.\n"); break;
+		case GLFW_KEY_HOME: trackball.reset(); break;
+		case GLFW_KEY_END: trackball2.reset(); break;
+		case GLFW_KEY_SLASH: 
+			if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || 
+				glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) {
+				prompt_usage();
+			}
 		}
 	}
+}
+
+void Application::on_wheel(GLFWwindow* window, double x, double y) {
+	scamera::Trackball* t = nullptr;
+	if (screen_mode == SCREEN_MODE::DEPTH) {
+		t = &trackball;
+	}
+	else if (screen_mode == SCREEN_MODE::OBJECT) {
+		t = &trackball2;
+	}
+	else return;
+
+	t->zoom(y);
 }
 
 int Application::cast_to_point_cloud(double tx, double ty, float& depth) {
@@ -740,4 +764,26 @@ int Application::cast_to_point_cloud(double tx, double ty, float& depth) {
 	depth = Length(picked_point - ray_origin);
 
 	return index_min_dist;
+}
+
+void Application::prompt_usage() {
+	fprintf(stdout, "Keyboard input\n");
+	fprintf(stdout, "1: Plane\n");
+	fprintf(stdout, "2: Sphere\n");
+	fprintf(stdout, "3: Cylinder\n");
+	fprintf(stdout, "4: Cone\n");
+	fprintf(stdout, "5: Torus\n");
+	fprintf(stdout, "D: switch to depth camera view (point cloud)\n");
+	fprintf(stdout, "C: switch to color camera view (images)\n");
+	fprintf(stdout, "O: switch to object view (point cloud)\n");
+	fprintf(stdout, "HOME: reset depth camera view\n");
+	fprintf(stdout, "END: reset object view\n");
+	fprintf(stdout, "ESC: exit\n");
+	fprintf(stdout, "Mouse input\n");
+	fprintf(stdout, "Left click: find primitives (in color camera view)\n");
+	fprintf(stdout, "Left drag: rotation (in depth camera or object view)\n");
+	fprintf(stdout, "Middle drag: panning (in depth camera or object view)\n");
+	fprintf(stdout, "Right drag: rolling (in depth camera or object view)\n");
+	fprintf(stdout, "Wheel: zooming (in depth camera or object view)\n");
+	fprintf(stdout, "?: prompt this message.\n");
 }

@@ -235,29 +235,9 @@ namespace sgl {
 
 		if (binding != ID) glBindVertexArray(binding);
 	}
-	
-	void Framebuffer::Init(int width, int height) {
-		glGenFramebuffers(1, &ID);
-		glBindFramebuffer(GL_FRAMEBUFFER, ID);
 
-		// create render texture
-		glGenTextures(1, &render_texture);
-		glBindTexture(GL_TEXTURE_2D, render_texture);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-		// create render buffer
-		glGenRenderbuffers(1, &render_buffer);
-		glBindRenderbuffer(GL_RENDERBUFFER, render_buffer);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, render_buffer);
-
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, render_texture, 0);
-
-
+	void DrawArrays::operator()() {
+		glDrawArrays(mode, first, count);
 	}
 
 	void DrawElementsBaseVertex::operator()() {

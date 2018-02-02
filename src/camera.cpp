@@ -2,13 +2,18 @@
 
 namespace scamera {
 
-	float Trackball::zoom_speed = 0.5f;
+	float Trackball::zoom_speed = 0.05f;
 	float Trackball::pan_speed = 0.1f;
 	float Trackball::rotate_speed = 0.75f;
 	float Trackball::translate_speed = 0.0005f;
 
 	void Camera::updateViewMatrix() { view_matrix = LookAt(eye, at, up); }
 	void Camera::updateProjectionMatrix() { projection_matrix = Orthographic(width, height, dnear, dfar); }
+
+
+	void Trackball::reset() {
+		curr = prev = home;
+	}
 
 	void Trackball::mouse(float x, float y, Trackball::Behavior behavior) {
 		prev = curr;
@@ -99,9 +104,19 @@ namespace scamera {
 	}
 
 	void Trackball::zoom(float x, float y) {
-		float dy = 0.7f*y;
-		curr.width *= (1 - dy)*zoom_speed;
-		curr.height *= (1 - dy)*zoom_speed;
+		float sign = y < this->y ? 1.f : -1.f;
+		this->y = y;
+		this->x = x;
+		float dt = 1.f+sign*zoom_speed;
+		curr.width *= dt;
+		curr.height *= dt;
+		curr.updateProjectionMatrix();
+	}
+
+	void Trackball::zoom(float sign) {
+		float dt = 1.f + sign*zoom_speed;
+		curr.width *= dt;
+		curr.height *= dt;
 		curr.updateProjectionMatrix();
 	}
 }

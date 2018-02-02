@@ -7,6 +7,8 @@ int main() {
 
 		if (app.init() == false) return EXIT_FAILURE;
 
+		app.prompt_usage();
+
 		app.run();
 	} 
 	catch (const rs::error& e) {
@@ -17,6 +19,3 @@ int main() {
 
 	return EXIT_SUCCESS;
 }
-//catch (std::exception& e) {
-//	fprintf(stderr, "exception: %s\n", e.what());
-//}

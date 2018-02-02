@@ -16,6 +16,7 @@
 #include "sgeometry.h"
 #include "shader_resources.h"
 #include "opengl_wrapper.h"
+#include "Renderer.h"
 #include "camera.h"
 
 using ubyte3 = struct { unsigned char r, g, b; };
@@ -28,6 +29,7 @@ class Application {
 	FS_FEATURE_TYPE type = FS_FEATURE_TYPE::FS_TYPE_ANY;
 
 	bool init_FindSurface();
+	void run_FindSurface(float x, float y);
 	void release_FindSurface();
 
 	// Intel RealSense ***************************
@@ -55,6 +57,15 @@ class Application {
 	void init_data();
 
 	// OpenGL ***************************
+	PointCloudRenderer depth_renderer;
+	PointCloudRenderer inlier_renderer;
+	PlaneRenderer plane_renderer;
+	SphereRenderer sphere_renderer;
+	CylinderRenderer cylinder_renderer;
+	ConeRenderer cone_renderer;
+	TorusRenderer torus_renderer;
+	ImageRenderer image_renderer;
+
 	std::map<const char*, sgl::Program> programs;
 	std::map<const char*, sgl::VertexArray> vertex_arrays;
 	std::map<const char*, sgl::VertexBuffer> vertex_buffers;
@@ -69,6 +80,7 @@ class Application {
 
 	smath::float3 hit_position = {};
 	scamera::Trackball trackball = {};
+	scamera::Trackball trackball2 = {};
 
 	// GLEW, GLFW ***************************
 	GLFWwindow* window = nullptr;
@@ -79,16 +91,16 @@ class Application {
 	int t_index = 0; 
 	double ms_log[60];
 
-	bool show_object = false;
-	bool show_depth = false;
-
+	enum class SCREEN_MODE { DEPTH, COLOR, OBJECT } screen_mode;
+	
 	// behaviors ***************************
 	void update(int frame, double time_elapsed);
 	void render(int frame, double time_elapsed);
-	void render_color_image();
-	void render_depth_point_cloud();
-	void render_inlier_point_cloud();
-	void render_geometries();
+	
+	void render_depth();
+	void render_color();
+	void render_inlier();
+	void render_geometry();
 	void finalize();
 
 public:
@@ -97,8 +109,10 @@ public:
 	void on_mouse_button(GLFWwindow* window, int button, int action, int mods);
 	void on_cursor_pos(GLFWwindow* window, double x, double y);
 	void on_key(GLFWwindow* window, int key, int scancode, int action, int mods);
+	void on_wheel(GLFWwindow* window, double x, double y);
 
 	// 
+	void prompt_usage();
 	bool init();
 	void run();
 };

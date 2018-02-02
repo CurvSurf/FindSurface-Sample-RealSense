@@ -42,9 +42,12 @@ namespace scamera {
 		Camera curr, prev, home;
 		float x, y;
 
+		void reset();
 		void mouse(float x, float y, Behavior behavior);
 		void motion(float x, float y);
 		void update(double elapsed_time);
+
+		void zoom(float sign);
 
 		mat4 view_matrix() { return curr.view_matrix; }
 		mat4 projection_matrix() { return curr.projection_matrix; }

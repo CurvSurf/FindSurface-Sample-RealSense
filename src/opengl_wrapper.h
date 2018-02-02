@@ -85,22 +85,26 @@ namespace sgl {
 		void AttribLPointer(GLuint index, GLint size, GLenum type, GLsizei stride, const GLvoid* pointer);
 	};
 
-	struct Framebuffer {
-		GLuint ID;
-		GLuint render_texture;
-		GLuint render_buffer;
+	struct DrawArrays {
+		GLenum mode; 
+		GLint first;
+		GLsizei count;
 
-		void Init(int width, int height);
-		void Release();
+		DrawArrays() : mode(GL_POINTS), first(), count() {}
+		DrawArrays(GLenum mode, GLint first, GLsizei count) : mode(mode), first(first), count(count) {}
 
+		void operator()();
 	};
 
 	struct DrawElementsBaseVertex {
-		GLenum mode = GL_TRIANGLES;
+		GLenum mode = GL_POINTS; 
 		GLsizei count = 0;
 		GLenum type = GL_UNSIGNED_INT;
 		GLvoid* indices = 0;
 		GLint basevertex = 0;
+
+		DrawElementsBaseVertex() : mode(GL_POINTS), count(), type(GL_UNSIGNED_INT), indices(), basevertex() {}
+		DrawElementsBaseVertex(GLenum mode, GLsizei count, GLenum type, GLvoid* indices, GLint basevertex) : mode(mode), count(count), type(type), indices(indices), basevertex(basevertex) {}
 
 		void operator()();
 	};
