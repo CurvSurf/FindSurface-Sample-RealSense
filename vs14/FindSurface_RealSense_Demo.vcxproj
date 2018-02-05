@@ -93,17 +93,18 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>.;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\librealsense\libs\x86;..\src\libFindSurface\lib_protected\win32\x86;..\src\3rdparty\glfw-3.2.1.bin.WIN32\lib-vc2015;..\src\3rdparty\glew-2.1.0\lib\Release\Win32</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>3rdparty\librealsense\libs\x86;libFindSurface\lib_protected\win32\x86;3rdparty\glfw-3.2.1.bin.WIN32\lib-vc2015;3rdparty\glew-2.1.0\lib\Release\Win32</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy ..\src\3rdparty\glew-2.1.0\bin\Release\Win32\glew32.dll $(OutDir)
-copy ..\src\3rdparty\glfw-3.2.1.bin.WIN32\lib-vc2015\glfw3.dll $(OutDir)
-copy ..\src\3rdparty\librealsense\libs\x86\realsense.dll $(OutDir)
-copy ..\src\libFindSurface\freepass_bin\win32\x86\FindSurface.dll $(OutDir)</Command>
+      <Command>copy 3rdparty\glew-2.1.0\bin\Release\Win32\glew32.dll $(OutDir)
+copy 3rdparty\glfw-3.2.1.bin.WIN32\lib-vc2015\glfw3.dll $(OutDir)
+copy 3rdparty\librealsense\libs\x86\realsense.dll $(OutDir)
+copy libFindSurface\freepass_bin\win32\x86\FindSurface.dll $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -114,17 +115,18 @@ copy ..\src\libFindSurface\freepass_bin\win32\x86\FindSurface.dll $(OutDir)</Com
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>.;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\librealsense\libs\x64;..\src\libFindSurface\lib_protected\win32\x64;..\src\3rdparty\glfw-3.2.1.bin.WIN64\lib-vc2015;..\src\3rdparty\glew-2.1.0\lib\Release\x64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>3rdparty\librealsense\libs\x64;libFindSurface\lib_protected\win32\x64;3rdparty\glfw-3.2.1.bin.WIN64\lib-vc2015;3rdparty\glew-2.1.0\lib\Release\x64</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy ..\src\3rdparty\glew-2.1.0\bin\Release\x64\glew32.dll $(OutDir)
-copy ..\src\3rdparty\glfw-3.2.1.bin.WIN64\lib-vc2015\glfw3.dll $(OutDir)
-copy ..\src\3rdparty\librealsense\libs\x64\realsense.dll $(OutDir)
-copy ..\src\libFindSurface\freepass_bin\win32\x64\FindSurface.dll $(OutDir)</Command>
+      <Command>copy 3rdparty\glew-2.1.0\bin\Release\x64\glew32.dll $(OutDir)
+copy 3rdparty\glfw-3.2.1.bin.WIN64\lib-vc2015\glfw3.dll $(OutDir)
+copy 3rdparty\librealsense\libs\x64\realsense.dll $(OutDir)
+copy libFindSurface\freepass_bin\win32\x64\FindSurface.dll $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -137,19 +139,20 @@ copy ..\src\libFindSurface\freepass_bin\win32\x64\FindSurface.dll $(OutDir)</Com
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>.;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\librealsense\libs\x86;..\src\libFindSurface\lib_protected\win32\x86;..\src\3rdparty\glfw-3.2.1.bin.WIN32\lib-vc2015;..\src\3rdparty\glew-2.1.0\lib\Release\Win32</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>3rdparty\librealsense\libs\x86;libFindSurface\lib_protected\win32\x86;3rdparty\glfw-3.2.1.bin.WIN32\lib-vc2015;3rdparty\glew-2.1.0\lib\Release\Win32</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy ..\src\3rdparty\glew-2.1.0\bin\Release\Win32\glew32.dll $(OutDir)
-copy ..\src\3rdparty\glfw-3.2.1.bin.WIN32\lib-vc2015\glfw3.dll $(OutDir)
-copy ..\src\3rdparty\librealsense\libs\x86\realsense.dll $(OutDir)
-copy ..\src\libFindSurface\freepass_bin\win32\x86\FindSurface.dll $(OutDir)</Command>
+      <Command>copy 3rdparty\glew-2.1.0\bin\Release\Win32\glew32.dll $(OutDir)
+copy 3rdparty\glfw-3.2.1.bin.WIN32\lib-vc2015\glfw3.dll $(OutDir)
+copy 3rdparty\librealsense\libs\x86\realsense.dll $(OutDir)
+copy libFindSurface\freepass_bin\win32\x86\FindSurface.dll $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -162,19 +165,20 @@ copy ..\src\libFindSurface\freepass_bin\win32\x86\FindSurface.dll $(OutDir)</Com
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>.;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\librealsense\libs\x64;..\src\libFindSurface\lib_protected\win32\x64;..\src\3rdparty\glfw-3.2.1.bin.WIN64\lib-vc2015;..\src\3rdparty\glew-2.1.0\lib\Release\x64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>3rdparty\librealsense\libs\x64;libFindSurface\lib_protected\win32\x64;3rdparty\glfw-3.2.1.bin.WIN64\lib-vc2015;3rdparty\glew-2.1.0\lib\Release\x64</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy ..\src\3rdparty\glew-2.1.0\bin\Release\x64\glew32.dll $(OutDir)
-copy ..\src\3rdparty\glfw-3.2.1.bin.WIN64\lib-vc2015\glfw3.dll $(OutDir)
-copy ..\src\3rdparty\librealsense\libs\x64\realsense.dll $(OutDir)
-copy ..\src\libFindSurface\freepass_bin\win32\x64\FindSurface.dll $(OutDir)</Command>
+      <Command>copy 3rdparty\glew-2.1.0\bin\Release\x64\glew32.dll $(OutDir)
+copy 3rdparty\glfw-3.2.1.bin.WIN64\lib-vc2015\glfw3.dll $(OutDir)
+copy 3rdparty\librealsense\libs\x64\realsense.dll $(OutDir)
+copy libFindSurface\freepass_bin\win32\x64\FindSurface.dll $(OutDir)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

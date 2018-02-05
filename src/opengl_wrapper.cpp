@@ -187,7 +187,7 @@ namespace sgl {
 
 	void VertexBuffer::Data(size_t count, size_t size, GLvoid* data, GLenum usage) {
 		Buffer::Data(count*size, data, usage);
-		this->count = count;
+		this->count = GLsizei(count);
 	}
 
 
@@ -196,7 +196,7 @@ namespace sgl {
 
 	void IndexBuffer::Data(size_t count, size_t size, GLvoid* data, GLenum usage) {
 		Buffer::Data(count*size, data, usage);
-		this->count = count;
+		this->count = GLsizei(count);
 	}
 
 

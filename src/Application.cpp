@@ -406,7 +406,7 @@ void Application::render_inlier() {
 
 void Application::render_geometry() {
 
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	switch (result.type) {
 	case FS_FEATURE_TYPE::FS_TYPE_PLANE:
 		plane_renderer.view_matrix = trackball2.view_matrix();

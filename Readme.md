@@ -6,7 +6,7 @@
 Overview
 --------
 
-This sample code demonstrates how FindSurface works with Intel RealSense devices (R200, ZR300).
+This sample demonstrates how FindSurface works with Intel RealSense devices (R200, ZR300).
 
 This sample program allows users to pick an object to make a rough 3D snapshot of the object.
 
@@ -49,7 +49,7 @@ Make sure you have downloaded the 3rdparty libraries mentioned in [Requirements]
 
 ##### Windows: Visual Studio
 
-
+Change the library path in project properties or see here.
 
 
 Contact

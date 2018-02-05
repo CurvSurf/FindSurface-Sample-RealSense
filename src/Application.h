@@ -91,7 +91,7 @@ class Application {
 	int t_index = 0; 
 	double ms_log[60];
 
-	enum class SCREEN_MODE { DEPTH, COLOR, OBJECT } screen_mode;
+	enum class SCREEN_MODE { DEPTH, COLOR, OBJECT } screen_mode = SCREEN_MODE::COLOR;
 	
 	// behaviors ***************************
 	void update(int frame, double time_elapsed);

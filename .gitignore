@@ -8,7 +8,15 @@ data/
 *.db
 *.opendb
 *.exe
-src/3rdparty/**/
+vs14/3rdparty/*
+vs14/3rdparty/**/
+!vs14/3rdparty/glew-2.1.0/Readme.md
+!vs14/3rdparty/glfw-3.2.1.bin.WIN32/Readme.md
+!vs14/3rdparty/glfw-3.2.1.bin.WIN64/Readme.md
+!vs14/3rdparty/librealsense/Readme.md
+vs14/libFindSurface/*
+vs14/libFindSurface/**/
+!vs14/libFindSurface/Readme.md
 vs14/Debug/*
 vs14/Debug/**/
 vs14/Release/*
