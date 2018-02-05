@@ -30,7 +30,17 @@ This sample requires GLEW, GLFW, librealsense library.
 You can download each of them at:
 - GLEW: [glew sourceforge](http://glew.sourceforge.net/)
 - GLFW: [official website](http://www.glfw.org/download.html)
-- librealsense: [librealsense regacy (github)](https://github.com/IntelRealSense/librealsense/tree/v1.12.1)
+- librealsense: [librealsense legacy release(github)](https://github.com/IntelRealSense/librealsense/tree/v1.12.1)
+
+To build this sample, you need:
+
+- Visual Studio 2015 or higher version (for C++11 features such as lambda function)
+
+To run this sample, you need:
+
+- OpenGL 4.3+ support graphics card (disrete or integrated)
+- Intel RealSense Device (ZR300 or R200)
+
 
 ### Linux
 
