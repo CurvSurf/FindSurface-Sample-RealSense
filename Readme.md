@@ -25,7 +25,7 @@ Requirements
 
 ### Windows
 
-This sample requires GLEW, GLFW, librealsense library.
+This sample requires GLEW, GLFW, librealsense libraries.
 
 You can download each of them at:
 - GLEW: [glew sourceforge](http://glew.sourceforge.net/)
@@ -44,22 +44,26 @@ To run this sample, you need:
 
 ### Linux
 
-Not available yet.
+This sample requires GLEW, GLFW, librealsense libraries.
 
+We recommend you to build the sample in Ubuntu 16.04 or higher version   
+(or you have to manually build GLEW and GLFW libraries instead of using `apt-get install`).
 
+[How to install librealsense in Linux](https://github.com/IntelRealSense/librealsense/blob/v1.12.1/doc/installation.md#video4linux-backend)   
 
-Quick Start
------
+You have to follow all the instructions (including Video4Linux backend) to successfully set up the library.
+
+Additionally, you need to install GLFW and GLEW if you have not installed them yet in your system.
+
+```SH
+sudo apt-get install libglfw3-dev libglew-dev
+```
 
 ### Before building the sample
 
 Download FindSurface SDK library files at [our developer website](https://developers.curvsurf.com/downloads.jsp).
 
-Make sure you have downloaded the 3rdparty libraries mentioned in [Requirements](#Requirements).
-
-##### Windows: Visual Studio
-
-Change the library path in project properties or see here.
+Make sure you have downloaded and installed the 3rdparty libraries mentioned above.
 
 
 Contact

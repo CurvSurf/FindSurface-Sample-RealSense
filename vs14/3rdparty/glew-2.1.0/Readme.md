@@ -1,9 +1,11 @@
 # FindSurface-Samples / RealSense / glew / Readme.md
 **Curv*Surf* FindSurface™ SDK** Samples - RealSense
 
-1. Download GLEW windows binaries at [here](http://glew.sourceforge.net/).
+Download GLEW windows binaries at [here](http://glew.sourceforge.net/).
 
-2. Unzip the file in the 3rdparty directory.      
+#### Windows
+
+Unzip the file in the 3rdparty directory.      
 Make sure that the files are located as follows:
 
 - For 32-bit platforms:
@@ -25,3 +27,7 @@ Or modify the library paths in SimpleGUI project settings (SimpleGUI.vcxproj) in
 This project uses a post-build event that copies required .dll files to $(OutDir), so you also have to modify it if you modify the library paths.
 
 If you downloaded a different version of glew, the library paths should be appropriately modified to locate the library files.
+
+#### Linux
+
+Follow the instructions in [here](https://github.com/CurvSurf/FindSurface-Sample-RealSense#requirements) to install the library.
