@@ -189,9 +189,11 @@ struct ImageRenderer : Renderer {
 		// 4. render the color image to screen.
 		program.Use(true);
 		program.Uniform1i("color_texture", 0);
-		
+		vertex_array.Bind(true);
+
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 
+		vertex_array.Bind(false);
 		program.Use(false);
 	}
 };

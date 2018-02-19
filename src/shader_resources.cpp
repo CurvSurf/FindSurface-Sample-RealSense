@@ -1,7 +1,7 @@
 #include "shader_resources.h"
 
-std::map<const char*, const char*> ShaderSource::vs_src;
-std::map<const char*, const char*> ShaderSource::fs_src;
+std::map<std::string, const char*> ShaderSource::vs_src;
+std::map<std::string, const char*> ShaderSource::fs_src;
 
 void ShaderSource::init() {
 	vs_src.clear();

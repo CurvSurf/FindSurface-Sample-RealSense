@@ -2,6 +2,8 @@
 #include <numeric>
 #include <functional>
 
+#if defined(_MSC_VER)
+
 #include "3rdparty\glew-2.1.0\include\GL\glew.h"
 #ifdef WIN32
 #include "3rdparty\glfw-3.2.1.bin.WIN32\include\GLFW\glfw3.h"
@@ -11,6 +13,16 @@
 #include <gl\GL.h>
 #include "3rdparty\librealsense\includes\rs.hpp"
 #include "libFindSurface\include\FindSurface.h"
+
+#else
+
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#include <GL/gl.h>
+#include <librealsense/rs.hpp>
+#include <FindSurface.h>
+
+#endif
 
 #include "smath.h"
 #include "sgeometry.h"

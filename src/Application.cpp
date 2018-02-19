@@ -1,10 +1,14 @@
 #include "Application.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glew32.lib")
 #pragma comment(lib, "glfw3dll.lib")
 #pragma comment(lib, "realsense.lib")
 #pragma comment(lib, "FindSurface.lib")
+
+#endif
 
 bool Application::init() {
 	if (init_RealSense() == false) return false;
@@ -13,6 +17,11 @@ bool Application::init() {
 	init_data();
 
 	glfwInit();
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
 	window = glfwCreateWindow(width, height, title, nullptr, nullptr);
 
 	glfwSetWindowUserPointer(window, this);
@@ -208,6 +217,7 @@ void Application::init_OpenGL() {
 	image_renderer.PBO[0].Data(buffer_size, nullptr, GL_STREAM_DRAW);
 	image_renderer.PBO[1].Init(GL_PIXEL_UNPACK_BUFFER);
 	image_renderer.PBO[1].Data(buffer_size, nullptr, GL_STREAM_DRAW);
+	image_renderer.vertex_array = geometry_vao;
 
 	trackball.curr.eye = smath::float3{};
 	trackball.curr.at = smath::float3{ 0, 0, 1 };
@@ -339,7 +349,7 @@ void Application::update(int frame, double time_elapsed) {
 
 	// 3. pass the point cloud to FindSurface.
 	cleanUpFindSurface(fs);
-	setPointCloudFloat(fs, depth_points.data(), unsigned int(depth_points.size()), 0);
+	setPointCloudFloat(fs, depth_points.data(), static_cast<unsigned int>(depth_points.size()), 0);
 
 	// 4. camera update
 	trackball.update(time_elapsed);
@@ -364,11 +374,12 @@ void Application::render(int frame, double time_elapsed) {
 		render_color(); 
 		
 		glEnable(GL_SCISSOR_TEST);
-		glViewport(0, 0, width / 5, height / 5);
 		glScissor(0, 0, width / 5, height / 5);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glDisable(GL_SCISSOR_TEST);
 
+		glViewport(0, 0, width / 5, height / 5);
+		
 		render_inlier();
 		render_geometry();
 		
@@ -618,7 +629,7 @@ void Application::run_FindSurface(float x, float y) {
 
 		static auto get_elbow_joint_angle = [&](smath::float3 torus_center, smath::float3 torus_axis, smath::float3& elbow_begin, float& angle) {
 			using namespace smath;
-			std::vector<float3>& inliers = get_inlier_point_cloud();
+			std::vector<float3> inliers = get_inlier_point_cloud();
 
 			for (float3& pt : inliers) {
 				// point => vector (center -> point)

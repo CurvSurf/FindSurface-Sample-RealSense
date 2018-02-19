@@ -56,7 +56,7 @@ namespace sgl {
 	};
 
 	struct VertexBuffer : Buffer {
-		GLsizei count;
+		GLsizei count=0;
 
 		void Init();
 
@@ -64,7 +64,7 @@ namespace sgl {
 	};
 
 	struct IndexBuffer : Buffer {
-		GLsizei count;
+		GLsizei count=0;
 
 		void Init();
 
