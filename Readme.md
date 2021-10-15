@@ -1,7 +1,7 @@
 # FindSurface-Samples / FindSurface_RealSense_Demo / Readme.md
 **Curv*Surf* FindSurface™ SDK** Sample - FindSurface_RealSense_Demo
 
-
+> Note: The content in this repository has been deprecated. See [this page](https://github.com/CurvSurf/FindSurface) instead.
 
 Overview
 --------
